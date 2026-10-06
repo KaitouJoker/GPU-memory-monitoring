@@ -102,7 +102,7 @@ cmake --build build --config Release --target step3_console_monitor
 
 ### 실행하기
 1. 파일 탐색기에서 `run_console_monitor.bat` 파일을 마우스 우클릭합니다.
-2. **[관리자 권한으로 실행]**을 선택합니다.
+2. **[관리자 권한으로 실행]** 을 선택합니다.
 3. 콘솔 창이 열리며 실시간 모니터링이 시작됩니다.
 4. 모니터링을 종료하려면 키보드 **`Q`** 키 또는 **`ESC`** 키를 누릅니다.
 
