@@ -332,9 +332,9 @@ int main(int argc, char* argv[])
 
     if (!IsRunAsAdmin())
     {
-        std::cout << "[주의] 현재 일반 사용자 권한으로 실행 중입니다.\n"
-                  << "NVIDIA GPU 하드웨어 성능 카운터 접근 권한 오류가 발생할 경우,\n"
-                  << "마우스 우클릭 -> [관리자 권한으로 실행]으로 시작해 주십시오.\n"
+        std::cout << "[WARNING] Running without administrator privileges.\n"
+                  << "If GPU hardware performance counter access fails,\n"
+                  << "right-click 'run_console_monitor.bat' -> [Run as Administrator].\n"
                   << "----------------------------------------------------------------" << std::endl;
     }
 
@@ -386,7 +386,7 @@ int main(int argc, char* argv[])
     std::cout << "GPU:    " << identifiers.pDeviceName << " (" << identifiers.pChipName << ")" << std::endl;
     std::cout << "Driver: " << driverVersion << std::endl;
     std::cout << "Rate:   " << intervalMs << " ms (" << (1000 / intervalMs) << " samples/sec)" << std::endl;
-    std::cout << "종료:   Ctrl + C 를 누르면 안전하게 종료됩니다." << std::endl;
+    std::cout << "Exit:   Press [Q] or [ESC] to safely stop monitoring." << std::endl;
     std::cout << "----------------------------------------------------------------\n" << std::endl;
 
     // 3. Create MetricsEvaluator
@@ -472,12 +472,12 @@ int main(int argc, char* argv[])
             0))
     {
         std::cerr << "\n================================================================" << std::endl;
-        std::cerr << "[권한 오류] NVIDIA GPU 성능 카운터 접근 권한이 필요합니다." << std::endl;
-        std::cerr << "(NVIDIA 보안 정책 ERR_NVGPUCTRPERM: 관리자 권한 필요)" << std::endl;
+        std::cerr << "[PERMISSION ERROR] NVIDIA GPU Performance Counter Access Required" << std::endl;
+        std::cerr << "(NVIDIA Security Policy ERR_NVGPUCTRPERM: Administrator Privileges Required)" << std::endl;
         std::cerr << "================================================================" << std::endl;
-        std::cerr << "시작 방법:" << std::endl;
-        std::cerr << "  'run_console_monitor.bat' 파일을 마우스 우클릭 후" << std::endl;
-        std::cerr << "  [관리자 권한으로 실행]을 클릭하여 실행해 주십시오." << std::endl;
+        std::cerr << "How to run:" << std::endl;
+        std::cerr << "  Right-click 'run_console_monitor.bat' and select" << std::endl;
+        std::cerr << "  [Run as Administrator] to start the monitor." << std::endl;
         std::cerr << "================================================================\n" << std::endl;
         return 1;
     }
@@ -496,7 +496,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    std::cout << "[모니터링 시작] 실시간 VRAM I/O 측정을 시작합니다...\n" << std::endl;
+    std::cout << "[START] Initializing real-time VRAM I/O monitoring...\n" << std::endl;
 
     // Clear console screen once for dedicated dashboard view
     system("cls");
@@ -687,7 +687,7 @@ int main(int argc, char* argv[])
         frame += MakeBorder();
         frame += MakeRow("Exit                : Press [Q] or [ESC] to Quit");
         frame += MakeBorder();
-        frame += "\n  >> [조작 안내] 모니터링을 종료하시려면 키보드 'Q' 또는 ESC를 누르세요.\n";
+        frame += "\n  >> [Instructions] Press 'Q' or ESC to safely stop monitoring.\n";
 
         std::cout << frame << std::flush;
     }
@@ -697,8 +697,8 @@ int main(int argc, char* argv[])
     SetConsoleCursorInfo(hOut, &cci);
 
     std::cout << "\n================================================================\n";
-    std::cout << " [안내] VRAM I/O 모니터링이 안전하게 종료되었습니다.\n";
-    std::cout << " GPU 하드웨어 성능 카운터 및 NVML 세션을 정상 정리하였습니다.\n";
+    std::cout << " [INFO] VRAM I/O monitoring session stopped cleanly.\n";
+    std::cout << " GPU hardware profiling counters and NVML session released.\n";
     std::cout << "================================================================\n" << std::endl;
 
     // Graceful cleanup
