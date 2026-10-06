@@ -12,13 +12,30 @@ endif()
 # Locate NVIDIA Nsight Perf SDK Root
 # -------------------------------------------------------------
 # Detection precedence:
-# 1. CMake parameter: -DNVPERF_SDK_ROOT="<path>"
-# 2. Environment variable: NVPERF_SDK_ROOT
-# 3. Standard fallback locations
+# 1. Project directory: put_here_NVIDIA_Nsight_Perf_SDK
+# 2. CMake parameter: -DNVPERF_SDK_ROOT="<path>"
+# 3. Environment variable: NVPERF_SDK_ROOT
+# 4. Standard fallback locations
 if (NOT DEFINED NVPERF_SDK_ROOT OR "${NVPERF_SDK_ROOT}" STREQUAL "")
-    if (DEFINED ENV{NVPERF_SDK_ROOT} AND NOT "$ENV{NVPERF_SDK_ROOT}" STREQUAL "")
-        set(NVPERF_SDK_ROOT "$ENV{NVPERF_SDK_ROOT}")
+    set(LOCAL_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/put_here_NVIDIA_Nsight_Perf_SDK")
+    if (EXISTS "${LOCAL_SDK_DIR}/NvPerf/include/nvperf_host.h")
+        set(NVPERF_SDK_ROOT "${LOCAL_SDK_DIR}")
     else()
+        # In case the zip was extracted into a nested subfolder inside put_here_NVIDIA_Nsight_Perf_SDK
+        file(GLOB SUBDIRS "${LOCAL_SDK_DIR}/*")
+        foreach(SUBDIR ${SUBDIRS})
+            if (IS_DIRECTORY "${SUBDIR}" AND EXISTS "${SUBDIR}/NvPerf/include/nvperf_host.h")
+                set(NVPERF_SDK_ROOT "${SUBDIR}")
+                break()
+            endif()
+        endforeach()
+    endif()
+
+    if ((NOT DEFINED NVPERF_SDK_ROOT OR "${NVPERF_SDK_ROOT}" STREQUAL "") AND DEFINED ENV{NVPERF_SDK_ROOT} AND NOT "$ENV{NVPERF_SDK_ROOT}" STREQUAL "")
+        set(NVPERF_SDK_ROOT "$ENV{NVPERF_SDK_ROOT}")
+    endif()
+
+    if (NOT DEFINED NVPERF_SDK_ROOT OR "${NVPERF_SDK_ROOT}" STREQUAL "")
         set(DEFAULT_CANDIDATE_PATHS
             "D:/NVIDIA GPU Computing Toolkit/NVIDIA_Nsight_Perf_SDK_2026.3_Public_Windows"
             "C:/NVIDIA GPU Computing Toolkit/NVIDIA_Nsight_Perf_SDK_2026.3_Public_Windows"
@@ -44,9 +61,12 @@ if (NOT EXISTS "${NVPERF_SDK_ROOT}/NvPerf/include/nvperf_host.h")
     message(FATAL_ERROR
         "\n========================================================================\n"
         "[ERROR] NVIDIA Nsight Perf SDK was not found at: '${NVPERF_SDK_ROOT}'\n"
-        "Please specify the SDK root directory via one of the following:\n"
-        "  1. CMake argument:   cmake -B build -DNVPERF_SDK_ROOT=\"<path-to-sdk>\"\n"
-        "  2. Environment var:  set NVPERF_SDK_ROOT=<path-to-sdk>\n"
+        "Please extract the NVIDIA Nsight Perf SDK into:\n"
+        "  ${CMAKE_CURRENT_SOURCE_DIR}/put_here_NVIDIA_Nsight_Perf_SDK\n"
+        "\n"
+        "Or specify the SDK root directory via:\n"
+        "  - CMake argument:   cmake -B build -DNVPERF_SDK_ROOT=\"<path-to-sdk>\"\n"
+        "  - Environment var:  set NVPERF_SDK_ROOT=<path-to-sdk>\n"
         "Download SDK: https://developer.nvidia.com/nsight-perf-sdk\n"
         "========================================================================"
     )

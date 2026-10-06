@@ -74,6 +74,7 @@ GPU-memory-monitoring/
 ├── settings.json               # 샘플링 주기 및 누적 카운트 설정 파일
 ├── run_console_monitor.bat     # 콘솔 모니터 실행 런처
 ├── enable_gpu_counters.bat     # 비관리자 계정용 레지스트리 권한 설정 도구 (선택 사항)
+├── put_here_NVIDIA_Nsight_Perf_SDK/ # NVIDIA Nsight Perf SDK 압축 해제 위치
 └── src/
     ├── step1_device_init.cpp   # 1단계: GPU 인식 및 Nsight Perf SDK 연동 테스트
     ├── step2_metric_enum.cpp   # 2단계: RTX 5090 지원 하드웨어 메트릭 동적 열거
@@ -85,7 +86,16 @@ GPU-memory-monitoring/
 ## 5. 빌드 방법
 
 ### 사전 준비
-1. [NVIDIA Nsight Perf SDK](https://developer.nvidia.com/nsight-perf-sdk) (Windows 패키지)를 다운로드하여 원하는 폴더에 압축을 해제합니다.
+1. [NVIDIA Nsight Perf SDK](https://developer.nvidia.com/nsight-perf-sdk) (Windows 패키지)를 다운로드합니다.
+2. 다운로드한 SDK 압축 파일의 내용물을 프로젝트 루트의 `put_here_NVIDIA_Nsight_Perf_SDK/` 폴더에 압축 해제합니다:
+   ```text
+   GPU-memory-monitoring/
+   └── put_here_NVIDIA_Nsight_Perf_SDK/
+       ├── NvPerf/
+       ├── redist/
+       └── Samples/
+   ```
+   *(참고: `put_here_NVIDIA_Nsight_Perf_SDK/` 폴더는 `.gitkeep` 파일을 통해 git에 등록되어 있으나, 내부 SDK 내용물은 `.gitignore`에 의해 GitHub에 업로드되지 않으므로 사용자가 직접 SDK를 받아 채워 넣어야 합니다.)*
 
 > [!NOTE]
 > **시스템 PATH 환경 변수 등록 불필요:**
@@ -93,18 +103,16 @@ GPU-memory-monitoring/
 
 ### SDK 경로 탐색 우선순위
 CMake는 다음 순서로 Nsight Perf SDK 설치 경로를 자동 감지합니다:
-1. CMake 명령행 인자: `-DNVPERF_SDK_ROOT="<SDK 설치 경로>"`
-2. 시스템 환경 변수: `NVPERF_SDK_ROOT`
-3. 기본 후보 경로 (예: `D:/NVIDIA GPU Computing Toolkit/...` 또는 `C:/NVIDIA GPU Computing Toolkit/...`)
+1. 로컬 프로젝트 폴더: `put_here_NVIDIA_Nsight_Perf_SDK/` (기본값 및 권장 방식)
+2. CMake 명령행 인자: `-DNVPERF_SDK_ROOT="<SDK 설치 경로>"`
+3. 시스템 환경 변수: `NVPERF_SDK_ROOT`
+4. 기본 후보 경로 (예: `D:/NVIDIA GPU Computing Toolkit/...` 또는 `C:/NVIDIA GPU Computing Toolkit/...`)
 
 ### 빌드 명령
 
 ```cmd
-# 1. 빌드 디렉터리 생성 및 설정 (SDK 설치 경로에 맞게 NVPERF_SDK_ROOT 지정 가능)
-cmake -B build -G "Visual Studio 17 2022" -A x64 -DNVPERF_SDK_ROOT="D:/NVIDIA GPU Computing Toolkit/NVIDIA_Nsight_Perf_SDK_2026.3_Public_Windows"
-
-# 또는 NVPERF_SDK_ROOT 환경 변수가 시스템에 등록되어 있는 경우:
-# cmake -B build -G "Visual Studio 17 2022" -A x64
+# 1. 빌드 디렉터리 생성 및 설정 (put_here_NVIDIA_Nsight_Perf_SDK 자동 감지)
+cmake -B build -G "Visual Studio 17 2022" -A x64
 
 # 2. Release 타깃 빌드
 cmake --build build --config Release --target step3_console_monitor

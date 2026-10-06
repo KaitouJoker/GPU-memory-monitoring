@@ -74,6 +74,7 @@ GPU-memory-monitoring/
 ├── settings.json               # Sampling rate and counter configuration
 ├── run_console_monitor.bat     # Launch script for console monitor
 ├── enable_gpu_counters.bat     # Optional registry script for non-admin profiling
+├── put_here_NVIDIA_Nsight_Perf_SDK/ # Place extracted NVIDIA Nsight Perf SDK here
 └── src/
     ├── step1_device_init.cpp   # Step 1: GPU recognition and Nsight Perf SDK initialization
     ├── step2_metric_enum.cpp   # Step 2: Dynamic hardware metric enumeration
@@ -85,7 +86,16 @@ GPU-memory-monitoring/
 ## 5. Building from Source
 
 ### Prerequisites
-1. Download the [NVIDIA Nsight Perf SDK](https://developer.nvidia.com/nsight-perf-sdk) (Windows version) and extract it to a directory of your choice.
+1. Download the [NVIDIA Nsight Perf SDK](https://developer.nvidia.com/nsight-perf-sdk) (Windows version).
+2. Extract the contents of the SDK zip archive directly into the `put_here_NVIDIA_Nsight_Perf_SDK/` directory in the project root:
+   ```text
+   GPU-memory-monitoring/
+   └── put_here_NVIDIA_Nsight_Perf_SDK/
+       ├── NvPerf/
+       ├── redist/
+       └── Samples/
+   ```
+   *(Note: The `put_here_NVIDIA_Nsight_Perf_SDK/` directory is tracked by git with a `.gitkeep` file, but its contents are ignored via `.gitignore` to comply with NVIDIA licensing and prevent large binary uploads. Users must download the SDK and populate this directory themselves.)*
 
 > [!NOTE]
 > **PATH Environment Variable is NOT required:**
@@ -93,18 +103,16 @@ GPU-memory-monitoring/
 
 ### SDK Path Resolution
 CMake resolves the Nsight Perf SDK location using the following priority order:
-1. CMake parameter: `-DNVPERF_SDK_ROOT="<path-to-sdk>"`
-2. Environment variable: `NVPERF_SDK_ROOT`
-3. Default installation locations (e.g. `D:/NVIDIA GPU Computing Toolkit/...` or `C:/NVIDIA GPU Computing Toolkit/...`)
+1. Local project folder: `put_here_NVIDIA_Nsight_Perf_SDK/` (Default & Recommended)
+2. CMake parameter: `-DNVPERF_SDK_ROOT="<path-to-sdk>"`
+3. Environment variable: `NVPERF_SDK_ROOT`
+4. Default installation locations (e.g. `D:/NVIDIA GPU Computing Toolkit/...` or `C:/NVIDIA GPU Computing Toolkit/...`)
 
 ### Build Commands
 
 ```cmd
-# 1. Generate build files (specify NVPERF_SDK_ROOT if using a custom directory)
-cmake -B build -G "Visual Studio 17 2022" -A x64 -DNVPERF_SDK_ROOT="D:/NVIDIA GPU Computing Toolkit/NVIDIA_Nsight_Perf_SDK_2026.3_Public_Windows"
-
-# Or if NVPERF_SDK_ROOT is configured in your system environment variables:
-# cmake -B build -G "Visual Studio 17 2022" -A x64
+# 1. Generate build files (automatically detects put_here_NVIDIA_Nsight_Perf_SDK)
+cmake -B build -G "Visual Studio 17 2022" -A x64
 
 # 2. Compile Release target
 cmake --build build --config Release --target step3_console_monitor

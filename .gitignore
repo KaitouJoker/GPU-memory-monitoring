@@ -18,3 +18,7 @@ bin/
 # Temporary / Log files
 *.log
 out_*.txt
+
+# NVIDIA Nsight Perf SDK directory contents (users download & extract here)
+put_here_NVIDIA_Nsight_Perf_SDK/*
+!put_here_NVIDIA_Nsight_Perf_SDK/.gitkeep
