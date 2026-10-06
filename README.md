@@ -1,110 +1,113 @@
+[English](README.md) | [한국어](README_KR.md)
+
 # NVIDIA GPU VRAM Real-time I/O Monitor
 
-NVIDIA GPU의 온보드 VRAM(GDDR7)과 GPU 연산 코어 간의 실제 실시간 메모리 읽기/쓰기 대역폭(I/O Throughput) 및 사용량을 측정하는 Windows 데스크톱 모니터링 도구입니다.
+A real-time Windows desktop monitoring tool that measures the actual physical memory read/write bandwidth (I/O Throughput) and usage between the NVIDIA GPU on-board VRAM (GDDR7) and GPU compute cores.
 
-단순한 VRAM 할당량 표시를 넘어, NVIDIA Nsight Perf SDK의 하드웨어 주기적 성능 샘플러(Periodic Sampler)와 NVML(NVIDIA Management Library)을 직접 활용하여 실제 물리 메모리 버스에서 발생하는 실시간 트래픽을 측정합니다.
-
----
-
-## 1. 주요 기능
-
-- VRAM Read Bandwidth (GB/s): GPU 코어가 물리 VRAM에서 데이터를 읽어오는 실시간 대역폭
-- VRAM Write Bandwidth (GB/s): GPU 코어가 렌더 타깃 및 연산 결과를 VRAM에 기록하는 실시간 대역폭
-- Total VRAM I/O (GB/s): 실시간 총 메모리 I/O 처리량 (Read + Write)
-- VRAM 사용량 및 점유율: 전체 용량 대비 현재 사용 중인 VRAM 용량 (GB 및 %)
-- Memory Controller Load (%): GPU 메모리 컨트롤러의 실시간 부하율
-- 레이저 정렬 ASCII 대시보드: 폰트나 터미널 환경에 구애받지 않는 고정폭 카드 UI
-- 무깜빡임(Zero-Flicker) 인플레이스 갱신: 콘솔 커서를 숨기고 고정 좌표에서 갱신하여 깜빡임 없는 모니터링 제공
-- settings.json 환경 설정: 샘플링 주기(ms) 조절 및 누적 카운트 표시 On/Off 지원
-- 안전한 원클릭 종료: 'Q' 키 또는 ESC 키를 통해 GPU 세션을 정상 정리하고 즉시 종료
+Unlike standard monitoring utilities that only display static VRAM allocation, this tool directly interfaces with the NVIDIA Nsight Perf SDK hardware Periodic Sampler (`GpuPeriodicSampler`) and NVML (NVIDIA Management Library) to capture genuine bus traffic on the physical memory subsystem during gaming and compute workloads.
 
 ---
 
-## 2. 측정 원리 및 아키텍처
+## 1. Key Features
 
-본 도구가 측정하는 트래픽은 시스템 RAM ↔ VRAM 간의 PCIe 전송(최대 64 GB/s)이 아니라, 그래픽카드 기판 내부의 **GPU Core(L2 캐시/메모리 컨트롤러) ↔ 온보드 VRAM(GDDR7 물리 메모리)** 간의 초고속 메모리 버스 트래픽입니다.
+- VRAM Read Bandwidth (GB/s): Real-time throughput of GPU cores fetching textures, geometry, and shader data from physical VRAM
+- VRAM Write Bandwidth (GB/s): Real-time throughput of GPU cores writing render targets, depth buffers, and compute buffers to physical VRAM
+- Total VRAM I/O (GB/s): Combined real-time memory traffic (Read + Write)
+- VRAM Allocation & Usage: Current VRAM usage relative to total capacity (in GB and percentage)
+- Memory Controller Load (%): Real-time workload percentage of the GPU memory controller
+- Laser-Aligned ASCII Dashboard: Rigid fixed-width card layout providing clean visualization regardless of terminal font quirks
+- Zero-Flicker In-Place Refresh: Hides the console cursor and updates from fixed coordinates (0, 0) without screen tearing or scrolling
+- settings.json Configuration: Configurable sampling intervals (ms) and sample accumulation counter toggle (On/Off)
+- One-Key Safe Exit: Instantly terminates and cleanly releases GPU hardware sessions upon pressing 'Q' or ESC
+
+---
+
+## 2. Measurement Principle & Architecture
+
+The traffic measured by this tool is not host-to-device PCIe bus transfers (which peak at ~64 GB/s on PCIe 5.0 x16). Instead, it captures high-speed internal bus transfers between the **GPU Cores (L2 Cache / Memory Controller) and the physical on-board GDDR7 VRAM** on the graphics card PCB:
 
 ```text
-[ 시스템 영역 ]                     [ NVIDIA GeForce RTX 5090 ]
+[ Host System ]                     [ NVIDIA GeForce RTX 5090 ]
   
-  CPU RAM / SSD                        GPU Core (SM / 셰이더 연산)
+  CPU RAM / SSD                        GPU Cores (SMs / Compute / RT)
       │                                            │
       │                                       L1/L2 Cache
       │                                            │
-      │ (PCIe 5.0 버스)                       (512-bit GDDR7 버스)
-      │ [최대 ~64 GB/s]                      [최대 ~1,792 GB/s]
+      │ (PCIe 5.0 Bus)                        (512-bit GDDR7 Bus)
+      │ [Peak ~64 GB/s]                      [Peak ~1,792 GB/s]
       │                                            │
       └────────── DMA Controller ─────────> [ VRAM (GDDR7 32GB) ]
                                                    ▲
                                                    │
-                                            본 도구 측정 지점
-                                     (dram__bytes_op_read / write)
+                                          Measured by this tool
+                                      (dram__bytes_op_read / write)
 ```
 
-- 측정 카운터: NVIDIA Blackwell 아키텍처(GB202)의 하드웨어 카운터인 `dram__bytes_op_read.sum` 및 `dram__bytes_op_write.sum`
-- 대역폭 계산식:
+- Hardware Performance Counters: Blackwell GB202 counters `dram__bytes_op_read.sum` and `dram__bytes_op_write.sum`
+- Throughput Calculation Formula:
   - Read GB/s = (Delta Read Bytes / Delta Time) / 1,000,000,000
   - Write GB/s = (Delta Write Bytes / Delta Time) / 1,000,000,000
-- 3D 게임 구동 시 텍스처 샘플링, 지오메트리 로드, 렌더 타깃 쓰기, 레이트레이싱 가속 구조 순회 등으로 인해 수백 GB/s 이상의 부하가 실시간으로 측정됩니다.
+- During 3D gaming (e.g. 4K texture sampling, G-Buffer writing, Ray Tracing BVH traversal), memory traffic surges to hundreds of GB/s, reflecting true real-time memory bus pressure.
 
 ---
 
-## 3. 실행 환경 및 요구 사항
+## 3. System Requirements
 
-- 운영체제: Windows 10 22H2 / Windows 11 (64-bit)
-- 대상 GPU: NVIDIA GeForce RTX 5090 (Blackwell GB202 아키텍처) 및 호환 NVIDIA GPU
-- 드라이버: NVIDIA Game Ready / Studio Driver (610.62 이상 권장)
-- 권한: NVIDIA 보안 정책(ERR_NVGPUCTRPERM)에 따라 GPU 하드웨어 성능 카운터 접근을 위해 **관리자 권한(Administrator)** 필수
-- 빌드 도구 (소스 빌드 시):
-  - CMake 3.20 이상
-  - Microsoft Visual C++ (MSVC) C++17 지원 컴파일러
+- Operating System: Windows 10 22H2 / Windows 11 (64-bit)
+- Target GPU: NVIDIA GeForce RTX 5090 (Blackwell GB202) and compatible NVIDIA architectures
+- Driver: NVIDIA Game Ready / Studio Driver (610.62 or later recommended)
+- Privilege: **Administrator privileges** required to access hardware profiling counters per NVIDIA security policy (ERR_NVGPUCTRPERM)
+- Build Tools (when building from source):
+  - CMake 3.20 or newer
+  - Microsoft Visual C++ (MSVC) compiler with C++17 support
   - NVIDIA Nsight Perf SDK
 
 ---
 
-## 4. 디렉터리 구성
+## 4. Project Structure
 
 ```text
 GPU-memory-monitoring/
-├── CMakeLists.txt              # CMake 빌드 설정 파일
-├── README.md                   # 프로젝트 문서
-├── settings.json               # 샘플링 주기 및 누적 카운트 설정 파일
-├── run_console_monitor.bat     # 콘솔 모니터 실행 런처
-├── enable_gpu_counters.bat     # 비관리자 계정용 레지스트리 권한 설정 도구 (선택 사항)
+├── CMakeLists.txt              # CMake build configuration
+├── README.md                   # Main English documentation
+├── README_KR.md                # Korean documentation
+├── settings.json               # Sampling rate and counter configuration
+├── run_console_monitor.bat     # Launch script for console monitor
+├── enable_gpu_counters.bat     # Optional registry script for non-admin profiling
 └── src/
-    ├── step1_device_init.cpp   # 1단계: GPU 인식 및 Nsight Perf SDK 연동 테스트
-    ├── step2_metric_enum.cpp   # 2단계: RTX 5090 지원 하드웨어 메트릭 동적 열거
-    └── step3_console_monitor.cpp # 3단계: 실시간 VRAM I/O 콘솔 모니터 핵심 소스
+    ├── step1_device_init.cpp   # Step 1: GPU recognition and Nsight Perf SDK initialization
+    ├── step2_metric_enum.cpp   # Step 2: Dynamic hardware metric enumeration
+    └── step3_console_monitor.cpp # Step 3: Real-time VRAM I/O console dashboard
 ```
 
 ---
 
-## 5. 빌드 방법
+## 5. Building from Source
 
-CMake를 사용하여 MSVC Release 모드로 빌드합니다.
+Build using CMake and MSVC in Release mode:
 
 ```cmd
-# 1. 빌드 디렉터리 생성 및 설정
+# 1. Generate build files
 cmake -B build -G "Visual Studio 17 2022" -A x64
 
-# 2. Release 타깃 빌드
+# 2. Compile Release target
 cmake --build build --config Release --target step3_console_monitor
 ```
 
-빌드가 완료되면 `build/Release/step3_console_monitor.exe` 실행 파일이 생성됩니다.
+The executable will be generated at `build/Release/step3_console_monitor.exe`.
 
 ---
 
-## 6. 사용 방법
+## 6. Usage & Configuration
 
-### 실행하기
-1. 파일 탐색기에서 `run_console_monitor.bat` 파일을 마우스 우클릭합니다.
-2. **[관리자 권한으로 실행]**을 선택합니다.
-3. 콘솔 창이 열리며 실시간 모니터링이 시작됩니다.
-4. 모니터링을 종료하려면 키보드 **`Q`** 키 또는 **`ESC`** 키를 누릅니다.
+### Running the Monitor
+1. In File Explorer, right-click `run_console_monitor.bat`.
+2. Select **[Run as Administrator]**.
+3. The console dashboard will launch and begin real-time measurement.
+4. Press **`Q`** or **`ESC`** at any time to gracefully stop monitoring and exit.
 
-### 설정 변경 (settings.json)
-`settings.json` 파일을 편집하여 측정 주기 및 카운터 누적 동작을 조정할 수 있습니다.
+### Configuring Settings (settings.json)
+Edit `settings.json` to customize the sampling interval and sample accumulation behavior:
 
 ```json
 {
@@ -113,12 +116,12 @@ cmake --build build --config Release --target step3_console_monitor
 }
 ```
 
-- `sampling_interval_ms`: 샘플링 간격(밀리초). 기본값은 100(초당 10회). 권장값: 50, 100, 250, 500, 1000
-- `enable_sample_accumulation`: 샘플 누적 카운트 활성화 여부. false로 설정 시 장시간 구동 시에도 카운터가 증가하지 않고 `OFF (Accumulation Disabled)`로 표시됩니다.
+- `sampling_interval_ms`: Sampling interval in milliseconds. Default is 100 (10 samples/sec). Recommended: 50, 100, 250, 500, 1000.
+- `enable_sample_accumulation`: Toggle for sample count tracking. If set to `false`, the counter will not increment and displays `OFF (Accumulation Disabled)` for long-term monitoring sessions.
 
 ---
 
-## 7. 화면 예시
+## 7. Dashboard Preview
 
 ```text
 +--------------------------------------------------------------+
@@ -141,13 +144,13 @@ cmake --build build --config Release --target step3_console_monitor
 | Exit                : Press [Q] or [ESC] to Quit             |
 +--------------------------------------------------------------+
 
-  >> [조작 안내] 모니터링을 종료하시려면 키보드 'Q' 또는 ESC를 누르세요.
+  >> [Instructions] Press 'Q' or ESC to safely stop monitoring.
 ```
 
 ---
 
-## 8. 메모리 안전성 및 리소스 관리
+## 8. Memory Safety & Resource Management
 
-- 본 모니터링 도구는 과거 샘플 데이터를 메모리에 누적 저장하지 않는 고정 메모리 구조(O(1))로 동작합니다.
-- 매 샘플링 주기마다 GPU 드라이버 레코드 버퍼를 즉시 확인 및 승인(AcknowledgeRecordBuffer)하여 반환하므로, 장시간 연속 실행 시에도 메모리 누수 없이 약 15~20MB 내외의 일정한 RAM 점유율을 유지합니다.
-- 프로그램 종료 시 Nsight Perf SDK 샘플러 세션과 NVML 라이브러리를 안전하게 해제(Graceful Shutdown)합니다.
+- Constant O(1) Memory Footprint: Past sample values are not appended to unbounded arrays or lists.
+- Deterministic Driver Buffer Flushing: Driver record buffers are promptly decoded and acknowledged (`AcknowledgeRecordBuffer`) on each sampling tick, maintaining a steady RAM usage of ~15-20 MB even across days of operation.
+- Graceful Shutdown: The GpuPeriodicSampler session and NVML context are cleanly detached and terminated upon exit.
