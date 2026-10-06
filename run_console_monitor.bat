@@ -1,4 +1,5 @@
 @echo off
+mode con cols=64 lines=22
 setlocal
 cd /d "%~dp0"
 
