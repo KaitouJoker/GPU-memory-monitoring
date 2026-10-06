@@ -1,0 +1,20 @@
+# Build outputs
+build/
+bin/
+*.exe
+*.dll
+*.lib
+*.obj
+*.pdb
+*.ilk
+*.exp
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Temporary / Log files
+*.log
+out_*.txt

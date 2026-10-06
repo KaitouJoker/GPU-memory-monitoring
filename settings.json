@@ -1,0 +1,4 @@
+{
+  "sampling_interval_ms": 500,
+  "enable_sample_accumulation": false
+}
