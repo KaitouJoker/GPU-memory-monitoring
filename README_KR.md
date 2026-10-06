@@ -144,7 +144,7 @@ cmake --build build --config Release --target step3_console_monitor
 | Exit                : Press [Q] or [ESC] to Quit             |
 +--------------------------------------------------------------+
 
-  >> [조작 안내] 모니터링을 종료하시려면 키보드 'Q' 또는 ESC를 누르세요.
+  >> [Instructions] Press 'Q' or ESC to safely stop monitoring.
 ```
 
 ---
