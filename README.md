@@ -60,7 +60,7 @@ The traffic measured by this tool is not host-to-device PCIe bus transfers (whic
 - Build Tools (when building from source):
   - CMake 3.20 or newer
   - Microsoft Visual C++ (MSVC) compiler with C++17 support
-  - NVIDIA Nsight Perf SDK
+  - NVIDIA Nsight Perf SDK (Public Windows package)
 
 ---
 
@@ -84,17 +84,33 @@ GPU-memory-monitoring/
 
 ## 5. Building from Source
 
-Build using CMake and MSVC in Release mode:
+### Prerequisites
+1. Download the [NVIDIA Nsight Perf SDK](https://developer.nvidia.com/nsight-perf-sdk) (Windows version) and extract it to a directory of your choice.
+
+> [!NOTE]
+> **PATH Environment Variable is NOT required:**
+> You do **not** need to add the SDK `bin` folder to your system `PATH`. CMake automatically copies `nvperf_grfx_host.dll` into the output executable directory (`build/Release/`) during the post-build step. In addition, `nvml.dll` is dynamically loaded at runtime from the default Windows system driver store (`C:\Windows\System32`).
+
+### SDK Path Resolution
+CMake resolves the Nsight Perf SDK location using the following priority order:
+1. CMake parameter: `-DNVPERF_SDK_ROOT="<path-to-sdk>"`
+2. Environment variable: `NVPERF_SDK_ROOT`
+3. Default installation locations (e.g. `D:/NVIDIA GPU Computing Toolkit/...` or `C:/NVIDIA GPU Computing Toolkit/...`)
+
+### Build Commands
 
 ```cmd
-# 1. Generate build files
-cmake -B build -G "Visual Studio 17 2022" -A x64
+# 1. Generate build files (specify NVPERF_SDK_ROOT if using a custom directory)
+cmake -B build -G "Visual Studio 17 2022" -A x64 -DNVPERF_SDK_ROOT="D:/NVIDIA GPU Computing Toolkit/NVIDIA_Nsight_Perf_SDK_2026.3_Public_Windows"
+
+# Or if NVPERF_SDK_ROOT is configured in your system environment variables:
+# cmake -B build -G "Visual Studio 17 2022" -A x64
 
 # 2. Compile Release target
 cmake --build build --config Release --target step3_console_monitor
 ```
 
-The executable will be generated at `build/Release/step3_console_monitor.exe`.
+The executable and required DLL will be generated at `build/Release/step3_console_monitor.exe`.
 
 ---
 

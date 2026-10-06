@@ -60,7 +60,7 @@ NVIDIA GPU의 온보드 VRAM(GDDR7)과 GPU 연산 코어 간의 실제 실시간
 - 빌드 도구 (소스 빌드 시):
   - CMake 3.20 이상
   - Microsoft Visual C++ (MSVC) C++17 지원 컴파일러
-  - NVIDIA Nsight Perf SDK
+  - NVIDIA Nsight Perf SDK (Public Windows 패키지)
 
 ---
 
@@ -84,17 +84,33 @@ GPU-memory-monitoring/
 
 ## 5. 빌드 방법
 
-CMake를 사용하여 MSVC Release 모드로 빌드합니다.
+### 사전 준비
+1. [NVIDIA Nsight Perf SDK](https://developer.nvidia.com/nsight-perf-sdk) (Windows 패키지)를 다운로드하여 원하는 폴더에 압축을 해제합니다.
+
+> [!NOTE]
+> **시스템 PATH 환경 변수 등록 불필요:**
+> SDK의 bin 디렉터리를 시스템 `PATH` 환경 변수에 등록할 필요가 **없습니다**. CMake 빌드 완료 후 후처리 명령(`POST_BUILD`)에 의해 `nvperf_grfx_host.dll` 파일이 실행 파일과 동일한 디렉터리(`build/Release/`)로 자동 복사됩니다. 또한 GPU 제어 라이브러리인 `nvml.dll` 역시 Windows 드라이버 기본 저장소(`System32`)에서 런타임에 동적으로 로드됩니다.
+
+### SDK 경로 탐색 우선순위
+CMake는 다음 순서로 Nsight Perf SDK 설치 경로를 자동 감지합니다:
+1. CMake 명령행 인자: `-DNVPERF_SDK_ROOT="<SDK 설치 경로>"`
+2. 시스템 환경 변수: `NVPERF_SDK_ROOT`
+3. 기본 후보 경로 (예: `D:/NVIDIA GPU Computing Toolkit/...` 또는 `C:/NVIDIA GPU Computing Toolkit/...`)
+
+### 빌드 명령
 
 ```cmd
-# 1. 빌드 디렉터리 생성 및 설정
-cmake -B build -G "Visual Studio 17 2022" -A x64
+# 1. 빌드 디렉터리 생성 및 설정 (SDK 설치 경로에 맞게 NVPERF_SDK_ROOT 지정 가능)
+cmake -B build -G "Visual Studio 17 2022" -A x64 -DNVPERF_SDK_ROOT="D:/NVIDIA GPU Computing Toolkit/NVIDIA_Nsight_Perf_SDK_2026.3_Public_Windows"
+
+# 또는 NVPERF_SDK_ROOT 환경 변수가 시스템에 등록되어 있는 경우:
+# cmake -B build -G "Visual Studio 17 2022" -A x64
 
 # 2. Release 타깃 빌드
 cmake --build build --config Release --target step3_console_monitor
 ```
 
-빌드가 완료되면 `build/Release/step3_console_monitor.exe` 실행 파일이 생성됩니다.
+빌드가 완료되면 `build/Release/step3_console_monitor.exe` 실행 파일 및 필수 DLL이 생성됩니다.
 
 ---
 

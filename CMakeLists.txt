@@ -8,8 +8,51 @@ if (MSVC)
     add_compile_options(/utf-8)
 endif()
 
+# -------------------------------------------------------------
+# Locate NVIDIA Nsight Perf SDK Root
+# -------------------------------------------------------------
+# Detection precedence:
+# 1. CMake parameter: -DNVPERF_SDK_ROOT="<path>"
+# 2. Environment variable: NVPERF_SDK_ROOT
+# 3. Standard fallback locations
+if (NOT DEFINED NVPERF_SDK_ROOT OR "${NVPERF_SDK_ROOT}" STREQUAL "")
+    if (DEFINED ENV{NVPERF_SDK_ROOT} AND NOT "$ENV{NVPERF_SDK_ROOT}" STREQUAL "")
+        set(NVPERF_SDK_ROOT "$ENV{NVPERF_SDK_ROOT}")
+    else()
+        set(DEFAULT_CANDIDATE_PATHS
+            "D:/NVIDIA GPU Computing Toolkit/NVIDIA_Nsight_Perf_SDK_2026.3_Public_Windows"
+            "C:/NVIDIA GPU Computing Toolkit/NVIDIA_Nsight_Perf_SDK_2026.3_Public_Windows"
+            "C:/Program Files/NVIDIA Corporation/NVIDIA Nsight Perf SDK"
+        )
+        foreach(CANDIDATE ${DEFAULT_CANDIDATE_PATHS})
+            if (EXISTS "${CANDIDATE}/NvPerf/include/nvperf_host.h")
+                set(NVPERF_SDK_ROOT "${CANDIDATE}")
+                break()
+            endif()
+        endforeach()
+    endif()
+endif()
 
-set(NVPERF_SDK_ROOT "D:/NVIDIA GPU Computing Toolkit/NVIDIA_Nsight_Perf_SDK_2026.3_Public_Windows")
+if (NVPERF_SDK_ROOT)
+    file(TO_CMAKE_PATH "${NVPERF_SDK_ROOT}" NVPERF_SDK_ROOT)
+endif()
+
+set(NVPERF_SDK_ROOT "${NVPERF_SDK_ROOT}" CACHE PATH "Root directory of NVIDIA Nsight Perf SDK" FORCE)
+
+message(STATUS "Locating NVIDIA Nsight Perf SDK...")
+if (NOT EXISTS "${NVPERF_SDK_ROOT}/NvPerf/include/nvperf_host.h")
+    message(FATAL_ERROR
+        "\n========================================================================\n"
+        "[ERROR] NVIDIA Nsight Perf SDK was not found at: '${NVPERF_SDK_ROOT}'\n"
+        "Please specify the SDK root directory via one of the following:\n"
+        "  1. CMake argument:   cmake -B build -DNVPERF_SDK_ROOT=\"<path-to-sdk>\"\n"
+        "  2. Environment var:  set NVPERF_SDK_ROOT=<path-to-sdk>\n"
+        "Download SDK: https://developer.nvidia.com/nsight-perf-sdk\n"
+        "========================================================================"
+    )
+endif()
+
+message(STATUS "Found NVIDIA Nsight Perf SDK: ${NVPERF_SDK_ROOT}")
 
 include_directories(
     "${NVPERF_SDK_ROOT}/NvPerf/include"
@@ -46,5 +89,3 @@ add_custom_command(TARGET step3_console_monitor POST_BUILD
     "${NVPERF_SDK_ROOT}/NvPerf/bin/x64/nvperf_grfx_host.dll"
     $<TARGET_FILE_DIR:step3_console_monitor>
 )
-
-
